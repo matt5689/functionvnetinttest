@@ -1,0 +1,48 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "subscriptionId": {
+            "value": "153bf828-3e1e-48f9-8e6d-7f69c8e188aa"
+        },
+        "name": {
+            "value": "examplefa5601app"
+        },
+        "location": {
+            "value": "West US 2"
+        },
+        "hostingPlanName": {
+            "value": "exampleasp5601"
+        },
+        "serverFarmResourceGroup": {
+            "value": "aaaexample5601RG"
+        },
+        "alwaysOn": {
+            "value": true
+        },
+        "use32BitWorkerProcess": {
+            "value": true
+        },
+        "storageAccountName": {
+            "value": "globalstorage5601"
+        },
+        "netFrameworkVersion": {
+            "value": "v6.0"
+        },
+        "sku": {
+            "value": "PremiumV2"
+        },
+        "skuCode": {
+            "value": "P1v2"
+        },
+        "workerSize": {
+            "value": "3"
+        },
+        "workerSizeId": {
+            "value": "3"
+        },
+        "numberOfWorkers": {
+            "value": "1"
+        }
+    }
+}
