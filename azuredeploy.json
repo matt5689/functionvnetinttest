@@ -1,0 +1,306 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "subscriptionId": {
+            "type": "String"
+        },
+        "name": {
+            "type": "String"
+        },
+        "location": {
+            "type": "String"
+        },
+        "hostingPlanName": {
+            "type": "String"
+        },
+        "serverFarmResourceGroup": {
+            "type": "String"
+        },
+        "alwaysOn": {
+            "type": "Bool"
+        },
+        "use32BitWorkerProcess": {
+            "type": "Bool"
+        },
+        "storageAccountName": {
+            "type": "String"
+        },
+        "netFrameworkVersion": {
+            "type": "String"
+        },
+        "sku": {
+            "type": "String"
+        },
+        "skuCode": {
+            "type": "String"
+        },
+        "workerSize": {
+            "type": "String"
+        },
+        "workerSizeId": {
+            "type": "String"
+        },
+        "numberOfWorkers": {
+            "type": "String"
+        }
+    },
+    "variables": {
+        "inboundSubnetDeployment": "inboundSubnetDeployment",
+        "outboundSubnetDeployment": "outboundSubnetDeployment",
+        "storageSubnetDeployment": "storageSubnetDeployment",
+        "inboundPrivateDnsZoneName": "[format('{0}.azurewebsites.net', parameters('name'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('name')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "microsoft.insights/components/examplefaai",
+                "[concat('Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]"
+            ],
+            "kind": "functionapp",
+            "properties": {
+                "name": "[parameters('name')]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~4"
+                        },
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "dotnet"
+                        },
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference('microsoft.insights/components/examplefaai', '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                            "value": "[reference('microsoft.insights/components/examplefaai', '2015-05-01').ConnectionString]"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('153bf828-3e1e-48f9-8e6d-7f69c8e188aa','globalstorage5601rg','Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+                        }
+                    ],
+                    "cors": {
+                        "allowedOrigins": [
+                            "https://ms.portal.azure.com"
+                        ]
+                    },
+                    "use32BitWorkerProcess": "[parameters('use32BitWorkerProcess')]",
+                    "alwaysOn": "[parameters('alwaysOn')]",
+                    "vnetRouteAllEnabled": true,
+                    "netFrameworkVersion": "[parameters('netFrameworkVersion')]"
+                },
+                "serverFarmId": "[concat('/subscriptions/', parameters('subscriptionId'),'/resourcegroups/', parameters('serverFarmResourceGroup'), '/providers/Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]",
+                "clientAffinityEnabled": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('hostingPlanName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [],
+            "sku": {
+                "Tier": "[parameters('sku')]",
+                "Name": "[parameters('skuCode')]"
+            },
+            "kind": "",
+            "properties": {
+                "name": "[parameters('hostingPlanName')]",
+                "workerSize": "[parameters('workerSize')]",
+                "workerSizeId": "[parameters('workerSizeId')]",
+                "numberOfWorkers": "[parameters('numberOfWorkers')]",
+                "zoneRedundant": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-07-01",
+            "name": "examplevnet2",
+            "location": "westus2",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": []
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('inboundSubnetDeployment')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'examplevnet2')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Network/virtualNetworks/subnets",
+                            "apiVersion": "2020-07-01",
+                            "name": "examplevnet2/examplevnet2subnet1",
+                            "properties": {
+                                "delegations": [],
+                                "serviceEndpoints": [],
+                                "addressPrefix": "10.0.0.0/24",
+                                "privateEndpointNetworkPolicies": "Disabled"
+                            }
+                        }
+                    ]
+                }
+            },
+            "subscriptionId": "",
+            "resourceGroup": ""
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('outboundSubnetDeployment')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'examplevnet2')]",
+                "[variables('inboundSubnetDeployment')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Network/virtualNetworks/subnets",
+                            "apiVersion": "2020-07-01",
+                            "name": "examplevnet2/examplevnet2subnet2",
+                            "properties": {
+                                "delegations": [
+                                    {
+                                        "name": "delegation",
+                                        "properties": {
+                                            "serviceName": "Microsoft.Web/serverfarms"
+                                        }
+                                    }
+                                ],
+                                "serviceEndpoints": [],
+                                "addressPrefix": "10.0.1.0/24"
+                            }
+                        }
+                    ]
+                }
+            },
+            "subscriptionId": "",
+            "resourceGroup": ""
+        },
+        {
+            "type": "Microsoft.Network/privateEndpoints",
+            "apiVersion": "2021-02-01",
+            "name": "exampleprivateendpoint1",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites', parameters('name'))]",
+                "[variables('inboundSubnetDeployment')]"
+            ],
+            "properties": {
+                "subnet": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'examplevnet2', 'examplevnet2subnet1')]"
+                },
+                "privateLinkServiceConnections": [
+                    {
+                        "name": "exampleprivateendpoint1",
+                        "properties": {
+                            "privateLinkServiceId": "[resourceId('Microsoft.Web/Sites', parameters('name'))]",
+                            "groupIds": [
+                                "sites"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/privateDnsZones",
+            "apiVersion": "2018-09-01",
+            "name": "[variables('inboundPrivateDnsZoneName')]",
+            "location": "global",
+            "dependsOn": [
+                "exampleprivateendpoint1"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+            "apiVersion": "2020-03-01",
+            "name": "[concat('exampleprivateendpoint1', '/', 'default')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "exampleprivateendpoint1",
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('inboundPrivateDNSZoneName'))]"
+            ],
+            "properties": {
+                "privateDnsZoneConfigs": [
+                    {
+                        "name": "privatelink-azurewebsites-net",
+                        "properties": {
+                            "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('inboundPrivateDnsZoneName'))]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2018-09-01",
+            "name": "[format('{0}/{1}', variables('inboundPrivateDnsZoneName'), format('{0}-link', variables('inboundPrivateDnsZoneName')))]",
+            "location": "global",
+            "dependsOn": [
+                "exampleprivateendpoint1",
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('inboundPrivateDNSZoneName'))]"
+            ],
+            "properties": {
+                "virtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'examplevnet2')]"
+                },
+                "registrationEnabled": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/networkConfig",
+            "apiVersion": "2020-06-01",
+            "name": "[format('{0}/{1}', parameters('name'), 'virtualNetwork')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites', parameters('name'))]",
+                "[variables('outboundSubnetDeployment')]"
+            ],
+            "properties": {
+                "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'examplevnet2', 'examplevnet2subnet2')]"
+            }
+        },
+        {
+            "type": "microsoft.insights/components",
+            "apiVersion": "2020-02-02-preview",
+            "name": "examplefaai",
+            "location": "westus2",
+            "dependsOn": [],
+            "properties": {
+                "ApplicationId": "[parameters('name')]",
+                "Request_Source": "IbizaWebAppExtensionCreate",
+                "Flow_Type": "Redfield",
+                "Application_Type": "web",
+                "WorkspaceResourceId": "/subscriptions/153bf828-3e1e-48f9-8e6d-7f69c8e188aa/resourcegroups/defaultresourcegroup-wus2/providers/microsoft.operationalinsights/workspaces/defaultworkspace-153bf828-3e1e-48f9-8e6d-7f69c8e188aa-wus2"
+            }
+        }
+    ]
+}
