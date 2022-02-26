@@ -160,8 +160,6 @@
                     ]
                 }
             },
-            "subscriptionId": "",
-            "resourceGroup": ""
         },
         {
             "type": "Microsoft.Resources/deployments",
