@@ -2,9 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "subscriptionId": {
-            "value": "153bf828-3e1e-48f9-8e6d-7f69c8e188aa"
-        },
         "name": {
             "value": "examplefa5601app"
         },
